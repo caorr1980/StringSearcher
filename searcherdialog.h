@@ -24,6 +24,7 @@ private:
     Ui::SearcherDialog *ui;
 
     void updateComboBox(QComboBox *comboBox, QString &text);
+    void showFiles(const QStringList &files);
 };
 
 #endif // SEARCHERDIALOG_H
