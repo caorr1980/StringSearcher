@@ -266,11 +266,14 @@
          <property name="showGrid">
           <bool>false</bool>
          </property>
+         <property name="wordWrap">
+          <bool>false</bool>
+         </property>
          <property name="rowCount">
           <number>0</number>
          </property>
          <property name="columnCount">
-          <number>1</number>
+          <number>3</number>
          </property>
          <attribute name="horizontalHeaderVisible">
           <bool>true</bool>
@@ -284,6 +287,8 @@
          <attribute name="verticalHeaderVisible">
           <bool>false</bool>
          </attribute>
+         <column/>
+         <column/>
          <column/>
         </widget>
        </item>
