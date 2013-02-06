@@ -17,10 +17,90 @@ SearcherDialog::SearcherDialog(QWidget *parent) :
     ui->TBW_Result->setHorizontalHeaderLabels(headers);
     ui->TBW_Result->setColumnWidth(0, 300);
     ui->TBW_Result->setColumnWidth(1, 60);
+
+    QSettings settings("StringSearcher.ini", QSettings::IniFormat);
+    QString text;
+    int i, size;
+
+    /* update Keyword history */
+    size = settings.beginReadArray("KeyHistory");
+    for (i = 0; i < size; i++) {
+        settings.setArrayIndex(i);
+        text = settings.value("key").toString();
+        updateComboBox(ui->CMB_Keyword, text, false);
+    }
+    settings.endArray();
+
+    /* update Replace word history */
+    size = settings.beginReadArray("ReplaceHistory");
+    for (i = 0; i < size; i++) {
+        settings.setArrayIndex(i);
+        text = settings.value("replace").toString();
+        updateComboBox(ui->CMB_Replace, text, false);
+    }
+    settings.endArray();
+
+    /* update Filter history */
+    size = settings.beginReadArray("FilterHistory");
+    for (i = 0; i < size; i++) {
+        settings.setArrayIndex(i);
+        text = settings.value("filter").toString();
+        updateComboBox(ui->CMB_Filter, text, false);
+    }
+    settings.endArray();
+
+    /* update searching dir history */
+    size = settings.beginReadArray("SearchHistory");
+    for (i = 0; i < size; i++) {
+        settings.setArrayIndex(i);
+        text = settings.value("dir").toString();
+        updateComboBox(ui->CMB_DirPath, text, false);
+    }
+    settings.endArray();
 }
 
 SearcherDialog::~SearcherDialog()
-{
+{    
+    QSettings settings("StringSearcher.ini", QSettings::IniFormat);
+    QString text;
+    int i;
+
+    /* save Keyword history */
+    settings.beginWriteArray("KeyHistory");
+    for (i = 0; i < ui->CMB_Keyword->count(); i++) {
+        text = ui->CMB_Keyword->itemText(i);
+        settings.setArrayIndex(i);
+        settings.setValue("key", text);
+    }
+    settings.endArray();
+
+    /* save Replace history */
+    settings.beginWriteArray("ReplaceHistory");
+    for (i = 0; i < ui->CMB_Replace->count(); i++) {
+        text = ui->CMB_Replace->itemText(i);
+        settings.setArrayIndex(i);
+        settings.setValue("replace", text);
+    }
+    settings.endArray();
+
+    /* save Filter history */
+    settings.beginWriteArray("FilterHistory");
+    for (i = 0; i < ui->CMB_Filter->count(); i++) {
+        text = ui->CMB_Filter->itemText(i);
+        settings.setArrayIndex(i);
+        settings.setValue("filter", text);
+    }
+    settings.endArray();
+
+    /* save searching dir history */
+    settings.beginWriteArray("SearchHistory");
+    for (i = 0; i < ui->CMB_DirPath->count(); i++) {
+        text = ui->CMB_DirPath->itemText(i);
+        settings.setArrayIndex(i);
+        settings.setValue("dir", text);
+    }
+    settings.endArray();
+
     delete ui;
 }
 
@@ -90,13 +170,17 @@ void SearcherDialog::searchDirectory(QDir &dir, QString &filter, QString &key)
     }
 }
 
-void SearcherDialog::updateComboBox(QComboBox *comboBox, QString &text)
+void SearcherDialog::updateComboBox(QComboBox *comboBox, QString &text, bool reverse)
 {
     if (text.isEmpty())
         return;
 
-    if (comboBox->findText(text) == -1)
-        comboBox->insertItem(0, text);
+    if (comboBox->findText(text) == -1) {
+        if (reverse)
+            comboBox->insertItem(0, text);
+        else
+            comboBox->addItem(text);
+    }
 }
 
 bool SearcherDialog::searchString(const QString &filePath, const QString &key, SearchMode md)

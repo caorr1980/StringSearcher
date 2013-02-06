@@ -28,7 +28,7 @@ private slots:
 private:
     Ui::SearcherDialog *ui;
 
-    void updateComboBox(QComboBox *comboBox, QString &text);
+    void updateComboBox(QComboBox *comboBox, QString &text, bool reverse = true);
     void searchDirectory(QDir &dir, QString &filter, QString &key);
     bool searchString(const QString &filePath, const QString &key, SearchMode md = QTMode);
     void showResult(const QString &filePath, const int &line, const QString &context);
