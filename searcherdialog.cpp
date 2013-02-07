@@ -8,9 +8,6 @@ SearcherDialog::SearcherDialog(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    /* set default directory to search */
-    ui->CMB_DirPath->setEditText(QDir::currentPath());
-
     /* rename TBW_Result's horizontal header */
     QStringList headers;
     headers << tr("File") << tr("Line") << tr("Context");
@@ -18,90 +15,81 @@ SearcherDialog::SearcherDialog(QWidget *parent) :
     ui->TBW_Result->setColumnWidth(0, 300);
     ui->TBW_Result->setColumnWidth(1, 60);
 
-    QSettings settings("StringSearcher.ini", QSettings::IniFormat);
-    QString text;
-    int i, size;
-
-    /* update Keyword history */
-    size = settings.beginReadArray("KeyHistory");
-    for (i = 0; i < size; i++) {
-        settings.setArrayIndex(i);
-        text = settings.value("key").toString();
-        updateComboBox(ui->CMB_Keyword, text, false);
-    }
-    settings.endArray();
-
-    /* update Replace word history */
-    size = settings.beginReadArray("ReplaceHistory");
-    for (i = 0; i < size; i++) {
-        settings.setArrayIndex(i);
-        text = settings.value("replace").toString();
-        updateComboBox(ui->CMB_Replace, text, false);
-    }
-    settings.endArray();
-
-    /* update Filter history */
-    size = settings.beginReadArray("FilterHistory");
-    for (i = 0; i < size; i++) {
-        settings.setArrayIndex(i);
-        text = settings.value("filter").toString();
-        updateComboBox(ui->CMB_Filter, text, false);
-    }
-    settings.endArray();
-
-    /* update searching dir history */
-    size = settings.beginReadArray("SearchHistory");
-    for (i = 0; i < size; i++) {
-        settings.setArrayIndex(i);
-        text = settings.value("dir").toString();
-        updateComboBox(ui->CMB_DirPath, text, false);
-    }
-    settings.endArray();
+    readSettings();
 }
 
 SearcherDialog::~SearcherDialog()
-{    
+{
+    saveSettings();
+    delete ui;
+}
+
+void SearcherDialog::readSettings()
+{
+
     QSettings settings("StringSearcher.ini", QSettings::IniFormat);
-    QString text;
+    QStringList textList;
     int i;
 
+    settings.beginGroup("History");
+
+    /* update Keyword history */
+    textList = settings.value("key").toStringList();
+    for (i = 0; i < textList.size(); i++)
+        updateComboBox(ui->CMB_Keyword, textList[i], false);
+
+    /* update Replace word history */
+    textList = settings.value("replace").toStringList();
+    for (i = 0; i < textList.size(); i++)
+        updateComboBox(ui->CMB_Replace, textList[i], false);
+
+    /* update Filter history */
+    textList = settings.value("filter").toStringList();
+    for (i = 0; i < textList.size(); i++)
+        updateComboBox(ui->CMB_Filter, textList[i], false);
+
+    /* update searching dir history */
+    textList = settings.value("dir").toStringList();
+    if (textList.isEmpty())
+        textList.append(QDir::currentPath());
+    for (i = 0; i < textList.size(); i++)
+        updateComboBox(ui->CMB_DirPath, textList[i], false);
+
+    settings.endGroup();
+}
+
+void SearcherDialog::saveSettings()
+{
+    QSettings settings("StringSearcher.ini", QSettings::IniFormat);
+    QStringList textList;
+    int i;
+
+    settings.beginGroup("History");
+
     /* save Keyword history */
-    settings.beginWriteArray("KeyHistory");
-    for (i = 0; i < ui->CMB_Keyword->count(); i++) {
-        text = ui->CMB_Keyword->itemText(i);
-        settings.setArrayIndex(i);
-        settings.setValue("key", text);
-    }
-    settings.endArray();
+    for (i = 0; i < ui->CMB_Keyword->count(); i++)
+        textList.append(ui->CMB_Keyword->itemText(i));
+    settings.setValue("key", textList);
 
     /* save Replace history */
-    settings.beginWriteArray("ReplaceHistory");
-    for (i = 0; i < ui->CMB_Replace->count(); i++) {
-        text = ui->CMB_Replace->itemText(i);
-        settings.setArrayIndex(i);
-        settings.setValue("replace", text);
-    }
-    settings.endArray();
+    textList.clear();
+    for (i = 0; i < ui->CMB_Replace->count(); i++)
+        textList.append(ui->CMB_Replace->itemText(i));
+    settings.setValue("replace", textList);
 
     /* save Filter history */
-    settings.beginWriteArray("FilterHistory");
-    for (i = 0; i < ui->CMB_Filter->count(); i++) {
-        text = ui->CMB_Filter->itemText(i);
-        settings.setArrayIndex(i);
-        settings.setValue("filter", text);
-    }
-    settings.endArray();
+    textList.clear();
+    for (i = 0; i < ui->CMB_Filter->count(); i++)
+        textList.append(ui->CMB_Filter->itemText(i));
+    settings.setValue("filter", textList);
 
-    /* save searching dir history */
-    settings.beginWriteArray("SearchHistory");
-    for (i = 0; i < ui->CMB_DirPath->count(); i++) {
-        text = ui->CMB_DirPath->itemText(i);
-        settings.setArrayIndex(i);
-        settings.setValue("dir", text);
-    }
-    settings.endArray();
+    /* save Directory history */
+    textList.clear();
+    for (i = 0; i < ui->CMB_DirPath->count(); i++)
+        textList.append(ui->CMB_DirPath->itemText(i));
+    settings.setValue("dir", textList);
 
-    delete ui;
+    settings.endGroup();
 }
 
 void SearcherDialog::on_BTN_Browse_clicked()
@@ -132,20 +120,19 @@ void SearcherDialog::on_BTN_Search_clicked()
     updateComboBox(ui->CMB_Replace, replace);
     QString filter = ui->CMB_Filter->currentText();
     updateComboBox(ui->CMB_Filter, filter);
+    QString path = ui->CMB_DirPath->currentText();
+    updateComboBox(ui->CMB_DirPath, path);
 
     if (filter.isEmpty())
         filter = "*";
+
+    searchDir = QDir(path);
 
     /* truncate previous results */
     ui->TBW_Result->clearContents();
     ui->TBW_Result->setRowCount(0);
 
     fileFoundNum = 0;
-
-    QString path = ui->CMB_DirPath->currentText();
-    updateComboBox(ui->CMB_DirPath, path);
-
-    searchDir = QDir(path);
     searchDirectory(searchDir, filter, key);
 
     ui->LBL_number->setText(tr("%1 file(s) found").arg(fileFoundNum));
