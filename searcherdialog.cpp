@@ -123,8 +123,20 @@ void SearcherDialog::on_BTN_Search_clicked()
     QString path = ui->CMB_DirPath->currentText();
     updateComboBox(ui->CMB_DirPath, path);
 
-    if (filter.isEmpty())
-        filter = "*";
+//    if (filter.isEmpty())
+//        filter = "*";
+
+    QStringList filterInList;
+    QStringList filterOutList;
+    QStringList filterList = filter.split(QRegExp("[ ,;]"), QString::SkipEmptyParts);
+    filterList.removeDuplicates();
+    for (int i = 0; i < filterList.count(); i++) {
+        if (filterList[i].startsWith("-"))
+            filterOutList.append(filterList[i].remove(0, 1));
+        else
+            filterInList.append(filterList[i]);
+
+    }
 
     searchDir = QDir(path);
 
@@ -133,23 +145,29 @@ void SearcherDialog::on_BTN_Search_clicked()
     ui->TBW_Result->setRowCount(0);
 
     fileFoundNum = 0;
-    searchDirectory(searchDir, filter, key);
+    searchDirectory(searchDir, filterInList, filterOutList, key);
 
     ui->LBL_number->setText(tr("%1 file(s) found").arg(fileFoundNum));
     ui->LBL_number->setWordWrap(true);
 }
 
-void SearcherDialog::searchDirectory(QDir &dir, QString &filter, QString &key)
+void SearcherDialog::searchDirectory(QDir &dir, QStringList &filterInList,
+                                     QStringList &filterOutList, QString &key)
 {
-    QStringList fileList = dir.entryList(QStringList(filter),
+    QStringList fileList = dir.entryList(filterInList,
                        QDir::Files | QDir::NoSymLinks | QDir::Dirs | QDir::NoDotAndDotDot);
+    QStringList fileOutList = dir.entryList(filterOutList,
+                       QDir::Files | QDir::NoSymLinks | QDir::Dirs | QDir::NoDotAndDotDot);
+    for (int i = 0; i < fileOutList.count(); i++) {
+        fileList.removeAll(fileOutList[i]);
+    }
 
     for (int i = 0; i < fileList.size(); i++) {
         QString filePath = dir.absoluteFilePath(fileList[i]);
         QFileInfo info(filePath);
         if (info.isDir()) {
             QDir subdir(filePath);
-            searchDirectory(subdir, filter, key);
+            searchDirectory(subdir, filterInList, filterOutList, key);
         } else {
             if (searchString(filePath, key))
                 fileFoundNum++;
@@ -162,11 +180,17 @@ void SearcherDialog::updateComboBox(QComboBox *comboBox, QString &text, bool rev
     if (text.isEmpty())
         return;
 
-    if (comboBox->findText(text) == -1) {
+    int index = comboBox->findText(text);
+
+    if (index == -1) {
         if (reverse)
             comboBox->insertItem(0, text);
         else
             comboBox->addItem(text);
+    } else {
+        comboBox->removeItem(index);
+        comboBox->insertItem(0, text);
+        comboBox->setCurrentIndex(0);
     }
 }
 
