@@ -33,27 +33,35 @@ void SearcherDialog::readSettings()
 
     settings.beginGroup("History");
 
-    /* update Keyword history */
+    /* restore Keyword history */
     textList = settings.value("key").toStringList();
     for (i = 0; i < textList.size(); i++)
-        updateComboBox(ui->CMB_Keyword, textList[i], false);
+        ui->CMB_Keyword->addItem(textList[i]);
 
-    /* update Replace word history */
+    /* restore Replace word history */
     textList = settings.value("replace").toStringList();
     for (i = 0; i < textList.size(); i++)
-        updateComboBox(ui->CMB_Replace, textList[i], false);
+        ui->CMB_Replace->addItem(textList[i]);
+    if (textList.size() > 0 && textList[0].isEmpty()) {
+        ui->CMB_Replace->removeItem(0);
+        ui->CMB_Replace->setEditText("");
+    }
 
-    /* update Filter history */
+    /* restore Filter history */
     textList = settings.value("filter").toStringList();
     for (i = 0; i < textList.size(); i++)
-        updateComboBox(ui->CMB_Filter, textList[i], false);
+        ui->CMB_Filter->addItem(textList[i]);
+    if (textList.size() > 0 && textList[0].isEmpty()) {
+        ui->CMB_Filter->removeItem(0);
+        ui->CMB_Filter->setEditText("");
+    }
 
-    /* update searching dir history */
+    /* restore searching dir history */
     textList = settings.value("dir").toStringList();
     if (textList.isEmpty())
         textList.append(QDir::currentPath());
     for (i = 0; i < textList.size(); i++)
-        updateComboBox(ui->CMB_DirPath, textList[i], false);
+        ui->CMB_DirPath->addItem(textList[i]);
 
     settings.endGroup();
 }
@@ -75,12 +83,16 @@ void SearcherDialog::saveSettings()
     textList.clear();
     for (i = 0; i < ui->CMB_Replace->count(); i++)
         textList.append(ui->CMB_Replace->itemText(i));
+    if (ui->CMB_Replace->currentText().isEmpty() && ui->CMB_Replace->count() > 0)
+        textList.prepend("");
     settings.setValue("replace", textList);
 
     /* save Filter history */
     textList.clear();
     for (i = 0; i < ui->CMB_Filter->count(); i++)
         textList.append(ui->CMB_Filter->itemText(i));
+    if (ui->CMB_Filter->currentText().isEmpty() && ui->CMB_Filter->count() > 0)
+        textList.prepend("");
     settings.setValue("filter", textList);
 
     /* save Directory history */
@@ -136,17 +148,15 @@ void SearcherDialog::on_BTN_Search_clicked()
 
     }
 
-    searchDir = QDir(path);
-
-    /* truncate previous results */
+    /* truncate previous results, and init result label */
     ui->TBW_Result->clearContents();
     ui->TBW_Result->setRowCount(0);
+    ui->LBL_number->setText(tr("0 file(s) found"));
 
-    fileFoundNum = 0;
+    fileMatched = 0;
+
+    searchDir = QDir(path);
     searchDirectory(searchDir, filterInList, filterOutList, key);
-
-    ui->LBL_number->setText(tr("%1 file(s) found").arg(fileFoundNum));
-    ui->LBL_number->setWordWrap(true);
 }
 
 void SearcherDialog::searchDirectory(QDir &dir, QStringList &filterInList,
@@ -155,6 +165,7 @@ void SearcherDialog::searchDirectory(QDir &dir, QStringList &filterInList,
     QStringList fileList = dir.entryList(filterInList,
                        QDir::Files | QDir::NoSymLinks | QDir::Dirs | QDir::NoDotAndDotDot);
 
+    /* filter-out files that don't want to search */
     if (!filterOutList.isEmpty()) {
         QStringList fileOutList = dir.entryList(filterOutList,
                            QDir::Files | QDir::NoSymLinks | QDir::Dirs | QDir::NoDotAndDotDot);
@@ -171,13 +182,15 @@ void SearcherDialog::searchDirectory(QDir &dir, QStringList &filterInList,
             QDir subdir(filePath);
             searchDirectory(subdir, filterInList, filterOutList, key);
         } else {
-            if (searchString(filePath, key))
-                fileFoundNum++;
+            if (searchString(filePath, key)) {
+                fileMatched++;
+                ui->LBL_number->setText(tr("%1 file(s) found").arg(fileMatched));
+            }
         }
     }
 }
 
-void SearcherDialog::updateComboBox(QComboBox *comboBox, QString &text, bool reverse)
+void SearcherDialog::updateComboBox(QComboBox *comboBox, QString &text)
 {
     if (text.isEmpty())
         return;
@@ -185,10 +198,7 @@ void SearcherDialog::updateComboBox(QComboBox *comboBox, QString &text, bool rev
     int index = comboBox->findText(text);
 
     if (index == -1) {
-        if (reverse)
-            comboBox->insertItem(0, text);
-        else
-            comboBox->addItem(text);
+        comboBox->insertItem(0, text);
     } else {
         comboBox->removeItem(index);
         comboBox->insertItem(0, text);
@@ -236,7 +246,7 @@ void SearcherDialog::showResult(const QString &filePath, const int &line, const 
     ui->TBW_Result->setItem(row, 0, item0);
 
     QTableWidgetItem *item1 = new QTableWidgetItem(tr("%1").arg(line));
-    item1->setTextAlignment(Qt::AlignHCenter);
+    item1->setTextAlignment(Qt::AlignCenter);
     item1->setFlags(item1->flags() ^ Qt::ItemIsEditable);
     ui->TBW_Result->setItem(row, 1, item1);
 

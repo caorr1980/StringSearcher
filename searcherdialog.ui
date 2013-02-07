@@ -299,6 +299,9 @@
            <property name="text">
             <string>0 file(s) found</string>
            </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
           </widget>
          </item>
          <item>
@@ -323,6 +326,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="BTN_Stop">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="text">
             <string>Stop</string>
            </property>
