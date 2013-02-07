@@ -114,6 +114,7 @@ void SearcherDialog::on_BTN_Search_clicked()
                          tr("Please specify the Keyword to search!"));
         return;
     }
+
     /* save history for each ComboBox */
     updateComboBox(ui->CMB_Keyword, key);
     QString replace = ui->CMB_Replace->currentText();
@@ -122,9 +123,6 @@ void SearcherDialog::on_BTN_Search_clicked()
     updateComboBox(ui->CMB_Filter, filter);
     QString path = ui->CMB_DirPath->currentText();
     updateComboBox(ui->CMB_DirPath, path);
-
-//    if (filter.isEmpty())
-//        filter = "*";
 
     QStringList filterInList;
     QStringList filterOutList;
@@ -156,10 +154,14 @@ void SearcherDialog::searchDirectory(QDir &dir, QStringList &filterInList,
 {
     QStringList fileList = dir.entryList(filterInList,
                        QDir::Files | QDir::NoSymLinks | QDir::Dirs | QDir::NoDotAndDotDot);
-    QStringList fileOutList = dir.entryList(filterOutList,
-                       QDir::Files | QDir::NoSymLinks | QDir::Dirs | QDir::NoDotAndDotDot);
-    for (int i = 0; i < fileOutList.count(); i++) {
-        fileList.removeAll(fileOutList[i]);
+
+    if (!filterOutList.isEmpty()) {
+        QStringList fileOutList = dir.entryList(filterOutList,
+                           QDir::Files | QDir::NoSymLinks | QDir::Dirs | QDir::NoDotAndDotDot);
+
+        for (int i = 0; i < fileOutList.count(); i++) {
+            fileList.removeAll(fileOutList[i]);
+        }
     }
 
     for (int i = 0; i < fileList.size(); i++) {
@@ -213,7 +215,7 @@ bool SearcherDialog::searchString(const QString &filePath, const QString &key, S
             text = in.readLine();
             if (text.contains(key)) {
                 int index = text.indexOf(key);
-                QString context = text.right(index - 20);
+                QString context = text.mid(index - 15);
                 showResult(filePath, line, context);
                 found = true;
                 break;
