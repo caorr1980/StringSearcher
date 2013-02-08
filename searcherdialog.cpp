@@ -2,6 +2,10 @@
 #include "searcherdialog.h"
 #include "ui_searcherdialog.h"
 
+QQueue<QString> fileQueue;
+QSemaphore *fileSem;
+QMutex mutex;   // mutex used by each thread for fileQueue.dequeue
+
 SearcherDialog::SearcherDialog(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::SearcherDialog)
@@ -16,10 +20,13 @@ SearcherDialog::SearcherDialog(QWidget *parent) :
     ui->TBW_Result->setColumnWidth(1, 60);
 
     readSettings();
+
+    connect(&cntWatcher, SIGNAL(finished()), this, SLOT(on_BTN_Stop_clicked()));
 }
 
 SearcherDialog::~SearcherDialog()
 {
+    on_BTN_Stop_clicked();
     saveSettings();
     delete ui;
 }
@@ -157,7 +164,17 @@ void SearcherDialog::on_BTN_Search_clicked()
     fileMatched = 0;
     searchDir = QDir(path);
     stopSearch = false;
-    searchDirectory(searchDir, filterInList, filterOutList, key);
+    fileSem = new QSemaphore(0);
+
+    ui->BTN_Search->setEnabled(false);
+    ui->BTN_Stop->setEnabled(true);
+    QFuture<void> cntFuture = QtConcurrent::run(this, &SearcherDialog::searchDirectory,
+                                 searchDir, filterInList, filterOutList, key);
+    cntWatcher.setFuture(cntFuture);
+
+    searchThread = new SearchThread(key);
+    connect(this, SIGNAL(signal_Stop()), searchThread, SLOT(slot_Stop()));
+    searchThread->start();
 }
 
 void SearcherDialog::searchDirectory(QDir &dir, QStringList &filterInList,
@@ -186,12 +203,8 @@ void SearcherDialog::searchDirectory(QDir &dir, QStringList &filterInList,
             QDir subdir(filePath);
             searchDirectory(subdir, filterInList, filterOutList, key);
         } else {
-            fileScanned++;
-            if (searchString(filePath, key)) {
-                fileMatched++;
-            }
-            ui->LBL_number->setText(tr("%1 file(s) scanned, %2 file(s) matched.")
-                                    .arg(fileScanned).arg(fileMatched));
+            fileQueue.enqueue(filePath);
+            fileSem->release();
         }
     }
 }
@@ -210,36 +223,6 @@ void SearcherDialog::updateComboBox(QComboBox *comboBox, QString &text)
         comboBox->insertItem(0, text);
         comboBox->setCurrentIndex(0);
     }
-}
-
-bool SearcherDialog::searchString(const QString &filePath, const QString &key, SearchMode md)
-{
-    bool found = false;
-    QFile file(filePath);
-
-    if (stopSearch || !file.open(QIODevice::ReadOnly)) {
-        return false;
-    }
-
-    QTextStream in(&file);
-    QString text;
-    int line = 0;
-
-    while(!in.atEnd()) {
-        line++;
-        if (md == QTMode) {
-            text = in.readLine();
-            if (text.contains(key)) {
-                int index = text.indexOf(key);
-                QString context = text.mid(index - 15);
-                showResult(filePath, line, context);
-                found = true;
-                break;
-            }
-        }
-    }
-
-    return found;
 }
 
 void SearcherDialog::showResult(const QString &filePath, const int &line, const QString &context)
@@ -264,4 +247,64 @@ void SearcherDialog::showResult(const QString &filePath, const int &line, const 
 void SearcherDialog::on_BTN_Stop_clicked()
 {
     stopSearch = true;
+    emit signal_Stop();
+    cntWatcher.waitForFinished();
+    fileSem->release();
+    ui->BTN_Stop->setEnabled(false);
+    ui->BTN_Search->setEnabled(true);
 }
+
+bool SearchThread::searchString(const QString &filePath, const QString &key)
+{
+    bool found = false;
+    QFile file(filePath);
+
+    if (stopSearch || !file.open(QIODevice::ReadOnly)) {
+        return false;
+    }
+
+    QTextStream in(&file);
+    QString text;
+    int line = 0;
+
+    while(!in.atEnd()) {
+        line++;
+        text = in.readLine();
+        if (text.contains(key)) {
+            int index = text.indexOf(key);
+            QString context = text.mid(index - 15);
+//                showResult(filePath, line, context);
+            found = true;
+            break;
+        }
+    }
+
+    return found;
+}
+
+void SearchThread::run()
+{
+    while (!stopSearch) {
+        fileSem->acquire();
+        if (stopSearch)
+            break;
+
+        QString filePath;
+        mutex.lock();
+        if (!fileQueue.isEmpty())
+            filePath = fileQueue.dequeue();
+        mutex.unlock();
+
+        if (!filePath.isEmpty()) {
+            if (searchString(filePath, key)) {
+//                fileMatched++;
+            }
+//            ui->LBL_number->setText(tr("%1 file(s) scanned, %2 file(s) matched.")
+//                                            .arg(fileScanned).arg(fileMatched));
+        }
+        qDebug() << filePath;
+    }
+
+    qDebug() << "";
+}
+

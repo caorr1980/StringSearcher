@@ -7,6 +7,8 @@ namespace Ui {
 class SearcherDialog;
 }
 
+class SearchThread;
+
 class SearcherDialog : public QDialog
 {
     Q_OBJECT
@@ -27,20 +29,43 @@ private slots:
 
     void on_BTN_Stop_clicked();
 
+signals:
+    void signal_Stop();
+
 private:
     Ui::SearcherDialog *ui;
 
     void readSettings();
     void saveSettings();
     void updateComboBox(QComboBox *comboBox, QString &text);
-    void searchDirectory(QDir &dir, QStringList &filterInList, QStringList &filterOutList, QString &key);
-    bool searchString(const QString &filePath, const QString &key, SearchMode md = QTMode);
+    void searchDirectory(QDir &dir, QStringList &filterInList,
+                         QStringList &filterOutList, QString &key);
     void showResult(const QString &filePath, const int &line, const QString &context);
 
     QDir searchDir;
+    QFutureWatcher<void> cntWatcher;
+    SearchThread *searchThread;
     bool stopSearch;
     int fileScanned;
     int fileMatched;
+};
+
+class SearchThread : public QThread
+{
+    Q_OBJECT
+
+public:
+    SearchThread(QString k):stopSearch(false), key(k){}
+
+private slots:
+    void slot_Stop(){stopSearch = true;}
+
+private:
+    void run();
+    bool searchString(const QString &filePath, const QString &key);
+
+    bool stopSearch;
+    QString key;
 };
 
 #endif // SEARCHERDIALOG_H
