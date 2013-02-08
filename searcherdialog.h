@@ -25,6 +25,8 @@ private slots:
 
     void on_BTN_Search_clicked();
 
+    void on_BTN_Stop_clicked();
+
 private:
     Ui::SearcherDialog *ui;
 
@@ -36,6 +38,8 @@ private:
     void showResult(const QString &filePath, const int &line, const QString &context);
 
     QDir searchDir;
+    bool stopSearch;
+    int fileScanned;
     int fileMatched;
 };
 

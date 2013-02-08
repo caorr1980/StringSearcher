@@ -151,19 +151,23 @@ void SearcherDialog::on_BTN_Search_clicked()
     /* truncate previous results, and init result label */
     ui->TBW_Result->clearContents();
     ui->TBW_Result->setRowCount(0);
-    ui->LBL_number->setText(tr("0 file(s) found"));
+    ui->LBL_number->setText(tr("0 file(s) scanned, 0 file(s) matched."));
 
+    fileScanned = 0;
     fileMatched = 0;
-
     searchDir = QDir(path);
+    stopSearch = false;
     searchDirectory(searchDir, filterInList, filterOutList, key);
 }
 
 void SearcherDialog::searchDirectory(QDir &dir, QStringList &filterInList,
                                      QStringList &filterOutList, QString &key)
 {
+    if (stopSearch)
+        return;
+
     QStringList fileList = dir.entryList(filterInList,
-                       QDir::Files | QDir::NoSymLinks | QDir::Dirs | QDir::NoDotAndDotDot);
+                       QDir::Files | QDir::NoSymLinks | QDir::AllDirs | QDir::NoDotAndDotDot);
 
     /* filter-out files that don't want to search */
     if (!filterOutList.isEmpty()) {
@@ -182,10 +186,12 @@ void SearcherDialog::searchDirectory(QDir &dir, QStringList &filterInList,
             QDir subdir(filePath);
             searchDirectory(subdir, filterInList, filterOutList, key);
         } else {
+            fileScanned++;
             if (searchString(filePath, key)) {
                 fileMatched++;
-                ui->LBL_number->setText(tr("%1 file(s) found").arg(fileMatched));
             }
+            ui->LBL_number->setText(tr("%1 file(s) scanned, %2 file(s) matched.")
+                                    .arg(fileScanned).arg(fileMatched));
         }
     }
 }
@@ -211,7 +217,7 @@ bool SearcherDialog::searchString(const QString &filePath, const QString &key, S
     bool found = false;
     QFile file(filePath);
 
-    if (!file.open(QIODevice::ReadOnly)) {
+    if (stopSearch || !file.open(QIODevice::ReadOnly)) {
         return false;
     }
 
@@ -253,4 +259,9 @@ void SearcherDialog::showResult(const QString &filePath, const int &line, const 
     QTableWidgetItem *item2 = new QTableWidgetItem(context);
     item2->setFlags(item2->flags() ^ Qt::ItemIsEditable);
     ui->TBW_Result->setItem(row, 2, item2);
+}
+
+void SearcherDialog::on_BTN_Stop_clicked()
+{
+    stopSearch = true;
 }
