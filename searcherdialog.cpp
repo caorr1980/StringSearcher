@@ -20,6 +20,8 @@ SearcherDialog::SearcherDialog(QWidget *parent) :
     ui->TBW_Result->setColumnWidth(1, 60);
 
     readSettings();
+    searchThread = NULL;
+    fileSem = NULL;
 
     connect(&cntWatcher, SIGNAL(finished()), this, SLOT(on_BTN_Stop_clicked()));
 }
@@ -174,6 +176,8 @@ void SearcherDialog::on_BTN_Search_clicked()
 
     searchThread = new SearchThread(key);
     connect(this, SIGNAL(signal_Stop()), searchThread, SLOT(slot_Stop()));
+    connect(searchThread, SIGNAL(signal_show_result(QString,int,QString)),
+            this, SLOT(slot_show_result(QString,int,QString)));
     searchThread->start();
 }
 
@@ -225,7 +229,7 @@ void SearcherDialog::updateComboBox(QComboBox *comboBox, QString &text)
     }
 }
 
-void SearcherDialog::showResult(const QString &filePath, const int &line, const QString &context)
+void SearcherDialog::slot_show_result(const QString filePath, const int line, const QString context)
 {
     int row = ui->TBW_Result->rowCount();
     ui->TBW_Result->insertRow(row);
@@ -249,7 +253,18 @@ void SearcherDialog::on_BTN_Stop_clicked()
     stopSearch = true;
     emit signal_Stop();
     cntWatcher.waitForFinished();
-    fileSem->release();
+    qDebug() << "a";
+    if (searchThread) {
+        fileSem->release();
+        qDebug() << "b";
+        searchThread->wait();
+        qDebug() << "c";
+        delete searchThread;
+        delete fileSem;
+        searchThread = NULL;
+        fileSem = NULL;
+    }
+    qDebug() << "d";
     ui->BTN_Stop->setEnabled(false);
     ui->BTN_Search->setEnabled(true);
 }
@@ -273,7 +288,7 @@ bool SearchThread::searchString(const QString &filePath, const QString &key)
         if (text.contains(key)) {
             int index = text.indexOf(key);
             QString context = text.mid(index - 15);
-//                showResult(filePath, line, context);
+            emit signal_show_result(filePath, line, context);
             found = true;
             break;
         }
@@ -305,6 +320,6 @@ void SearchThread::run()
         qDebug() << filePath;
     }
 
-    qDebug() << "";
+    qDebug() << "111";
 }
 

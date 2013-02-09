@@ -29,6 +29,8 @@ private slots:
 
     void on_BTN_Stop_clicked();
 
+    void slot_show_result(const QString filePath, const int line, const QString context);
+
 signals:
     void signal_Stop();
 
@@ -40,7 +42,6 @@ private:
     void updateComboBox(QComboBox *comboBox, QString &text);
     void searchDirectory(QDir &dir, QStringList &filterInList,
                          QStringList &filterOutList, QString &key);
-    void showResult(const QString &filePath, const int &line, const QString &context);
 
     QDir searchDir;
     QFutureWatcher<void> cntWatcher;
@@ -56,6 +57,9 @@ class SearchThread : public QThread
 
 public:
     SearchThread(QString k):stopSearch(false), key(k){}
+
+signals:
+    void signal_show_result(const QString filePath, const int line, const QString context);
 
 private slots:
     void slot_Stop(){stopSearch = true;}
