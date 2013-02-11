@@ -30,9 +30,7 @@ private slots:
     void on_BTN_Stop_clicked();
 
     void slot_show_result(const QString filePath, const int line, const QString context);
-
-signals:
-    void signal_Stop();
+    void slot_update_label(const int fileScanned, const int fileMatched, const int fileFailed);
 
 private:
     Ui::SearcherDialog *ui;
@@ -40,15 +38,16 @@ private:
     void readSettings();
     void saveSettings();
     void updateComboBox(QComboBox *comboBox, QString &text);
-    void searchDirectory(QDir &dir, QStringList &filterInList,
+    void scanDirectory(QDir &dir, QStringList &filterInList,
+                         QStringList &filterOutList, QString &key);
+    void collectFiles(QDir &dir, QStringList &filterInList,
                          QStringList &filterOutList, QString &key);
 
     QDir searchDir;
     QFutureWatcher<void> cntWatcher;
     SearchThread *searchThread;
-    bool stopSearch;
-    int fileScanned;
-    int fileMatched;
+    bool stopScanDir;
+    bool isThreadWorking;
 };
 
 class SearchThread : public QThread
@@ -56,20 +55,23 @@ class SearchThread : public QThread
     Q_OBJECT
 
 public:
-    SearchThread(QString k):stopSearch(false), key(k){}
+    explicit SearchThread(QString k);
+    ~SearchThread();
 
 signals:
     void signal_show_result(const QString filePath, const int line, const QString context);
-
-private slots:
-    void slot_Stop(){stopSearch = true;}
+    void signal_update_label(const int fileScanned, const int fileMatched, const int fileFailed);
 
 private:
     void run();
+    void stop();
     bool searchString(const QString &filePath, const QString &key);
 
-    bool stopSearch;
     QString key;
+    bool stopSearchStr;
+    int fileScanned;
+    int fileMatched;
+    int fileFailed;
 };
 
 #endif // SEARCHERDIALOG_H
