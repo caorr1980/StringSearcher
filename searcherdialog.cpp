@@ -179,6 +179,8 @@ void SearcherDialog::on_BTN_Search_clicked()
 
     ui->BTN_Search->setEnabled(false);
     ui->BTN_Stop->setEnabled(true);
+    ui->LBL_Time->setText(tr("Elapsed Time: 0 ms"));
+    ElapsedTime.start();
 
     searchDir = QDir(path);
     QFuture<void> cntFuture = QtConcurrent::run(this, &SearcherDialog::collectFiles,
@@ -191,8 +193,15 @@ void SearcherDialog::on_BTN_Search_clicked()
             this, SLOT(slot_show_result(QString,int,QString)));
     connect(searchThread, SIGNAL(signal_update_label(int, int, int)),
             this, SLOT(slot_update_label(int, int, int)));
-    connect(searchThread, SIGNAL(finished()), this, SLOT(on_BTN_Stop_clicked()));
+    connect(searchThread, SIGNAL(finished()), this, SLOT(slot_thread_stopped()));
     searchThread->start();
+}
+
+void SearcherDialog::slot_thread_stopped()
+{
+    ui->BTN_Stop->setEnabled(false);
+    ui->BTN_Search->setEnabled(true);
+    ui->LBL_Time->setText(tr("Elapsed Time: %1 ms").arg(ElapsedTime.elapsed()));
 }
 
 void SearcherDialog::on_BTN_Stop_clicked()
@@ -205,9 +214,6 @@ void SearcherDialog::on_BTN_Stop_clicked()
         searchThread = NULL;
         isThreadWorking = false;
     }
-
-    ui->BTN_Stop->setEnabled(false);
-    ui->BTN_Search->setEnabled(true);
 }
 
 void SearcherDialog::scanDirectory(QDir &dir, QStringList &filterInList,

@@ -31,6 +31,7 @@ private slots:
 
     void slot_show_result(const QString filePath, const int line, const QString context);
     void slot_update_label(const int fileScanned, const int fileMatched, const int fileFailed);
+    void slot_thread_stopped();
 
 private:
     Ui::SearcherDialog *ui;
@@ -43,6 +44,7 @@ private:
     void collectFiles(QDir &dir, QStringList &filterInList,
                          QStringList &filterOutList, QString &key);
 
+    QTime ElapsedTime;
     QDir searchDir;
     QFutureWatcher<void> cntWatcher;
     SearchThread *searchThread;
