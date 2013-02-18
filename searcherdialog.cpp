@@ -2,10 +2,12 @@
 #include "searcherdialog.h"
 #include "ui_searcherdialog.h"
 
+#define WORK_THREAD_NUM 8
+
 QQueue<QString> fileQueue;
-QMutex mutex;   // mutex used by each thread for fileQueue.dequeue
-QWaitCondition cond;
-QString EndSearchString("EndSearchString");
+QMutex mutex;       // protect fileQueue
+QSemaphore sem(0);  // sem.available() should be equal to fileQueue.count()
+QString StopSearchString("StopSearchString");
 
 SearcherDialog::SearcherDialog(QWidget *parent) :
     QDialog(parent),
@@ -21,8 +23,6 @@ SearcherDialog::SearcherDialog(QWidget *parent) :
     ui->TBW_Result->setColumnWidth(1, 60);
 
     readSettings();
-    searchThread = NULL;
-    isThreadWorking = false;
 }
 
 SearcherDialog::~SearcherDialog()
@@ -182,26 +182,33 @@ void SearcherDialog::on_BTN_Search_clicked()
     ui->LBL_Time->setText(tr("Elapsed Time: 0 ms"));
     ElapsedTime.start();
 
+    fileScanned = 0;
+    fileMatched = 0;
+    fileFailed = 0;
+
+    /* clear working status */
+    mutex.lock();
+    sem.acquire(sem.available());
+    fileQueue.clear();
+    searchThreads.clear();
+    mutex.unlock();
+
+    WorkingThreadNum = WORK_THREAD_NUM;
+    for (int i = 0; i < WorkingThreadNum; i++) {
+        SearchThread *thread = new SearchThread(key);
+        searchThreads.append(thread);
+        connect(thread, SIGNAL(signal_show_result(QString,int,QString)),
+                this, SLOT(slot_show_result(QString,int,QString)));
+        connect(thread, SIGNAL(signal_update_label(int, int)),
+                this, SLOT(slot_update_label(int, int)));
+        connect(thread, SIGNAL(finished()), this, SLOT(slot_thread_stopped()));
+        thread->start();
+    }
+
     searchDir = QDir(path);
     QFuture<void> cntFuture = QtConcurrent::run(this, &SearcherDialog::collectFiles,
                                  searchDir, filterInList, filterOutList, key);
     cntWatcher.setFuture(cntFuture);
-
-    isThreadWorking = true;
-    searchThread = new SearchThread(key);
-    connect(searchThread, SIGNAL(signal_show_result(QString,int,QString)),
-            this, SLOT(slot_show_result(QString,int,QString)));
-    connect(searchThread, SIGNAL(signal_update_label(int, int, int)),
-            this, SLOT(slot_update_label(int, int, int)));
-    connect(searchThread, SIGNAL(finished()), this, SLOT(slot_thread_stopped()));
-    searchThread->start();
-}
-
-void SearcherDialog::slot_thread_stopped()
-{
-    ui->BTN_Stop->setEnabled(false);
-    ui->BTN_Search->setEnabled(true);
-    ui->LBL_Time->setText(tr("Elapsed Time: %1 ms").arg(ElapsedTime.elapsed()));
 }
 
 void SearcherDialog::on_BTN_Stop_clicked()
@@ -209,11 +216,11 @@ void SearcherDialog::on_BTN_Stop_clicked()
     stopScanDir = true;
     cntWatcher.waitForFinished();
 
-    if (isThreadWorking) {
-        delete searchThread;
-        searchThread = NULL;
-        isThreadWorking = false;
+    for (int i = 0; i < WorkingThreadNum; i++) {
+        SearchThread *thread = searchThreads[i];
+        delete thread;
     }
+    searchThreads.clear();
 }
 
 void SearcherDialog::scanDirectory(QDir &dir, QStringList &filterInList,
@@ -242,9 +249,10 @@ void SearcherDialog::scanDirectory(QDir &dir, QStringList &filterInList,
             QDir subdir(filePath);
             scanDirectory(subdir, filterInList, filterOutList, key);
         } else {
-            QMutexLocker locker(&mutex);
+            mutex.lock();
             fileQueue.enqueue(filePath);
-            cond.wakeOne();
+            sem.release();
+            mutex.unlock();
         }
     }
 }
@@ -253,9 +261,14 @@ void SearcherDialog::collectFiles(QDir &dir, QStringList &filterInList,
                                      QStringList &filterOutList, QString &key)
 {
     stopScanDir = false;
-    fileQueue.clear();
     scanDirectory(dir, filterInList, filterOutList, key);
-    fileQueue.enqueue(EndSearchString);
+
+    mutex.lock();
+    for (int i = 0; i < WorkingThreadNum; i++) {
+        fileQueue.enqueue(StopSearchString);
+        sem.release();
+    }
+    mutex.unlock();
 }
 
 void SearcherDialog::slot_show_result(const QString filePath,
@@ -279,38 +292,51 @@ void SearcherDialog::slot_show_result(const QString filePath,
     ui->TBW_Result->setItem(row, 2, item2);
 }
 
-void SearcherDialog::slot_update_label(const int fileScanned,
-                                       const int fileMatched,
-                                       const int fileFailed)
+void SearcherDialog::slot_update_label(const int Matched, const int Failed)
 {
+    mutex.lock();
+    fileScanned++;
+    fileMatched += Matched;
+    fileFailed += Failed;
     ui->LBL_result->setText(tr(
             "Result: %1 file(s) scanned, %2 file(s) matched, %3 file(s) failed.")
             .arg(fileScanned).arg(fileMatched).arg(fileFailed));
+    mutex.unlock();
+}
+
+void SearcherDialog::slot_thread_stopped()
+{
+    WorkingThreadNum--;
+    if (WorkingThreadNum == 0) {
+        ui->BTN_Stop->setEnabled(false);
+        ui->BTN_Search->setEnabled(true);
+        ui->LBL_Time->setText(tr("Elapsed Time: %1 ms").arg(ElapsedTime.elapsed()));
+    }
 }
 
 SearchThread::SearchThread(QString k)
 {
     key = k;
     stopSearchStr = false;
-    fileScanned = 0;
-    fileMatched = 0;
-    fileFailed = 0;
 }
 
 SearchThread::~SearchThread()
 {
     stop();
-    wait();
+    if (!wait(1000)) {
+        qWarning() << "Dead loop Search Thread, force to stop it!";
+        terminate();
+        wait();
+    }
 }
 
-bool SearchThread::searchString(const QString &filePath, const QString &key)
+int SearchThread::searchString(const QString &filePath, const QString &key)
 {
-    bool found = false;
+    int found = 0;
     QFile file(filePath);
 
     if (!file.open(QIODevice::ReadOnly)) {
-        fileFailed++;
-        return false;
+        return -1;
     }
 
     QTextStream in(&file);
@@ -324,7 +350,7 @@ bool SearchThread::searchString(const QString &filePath, const QString &key)
             int index = text.indexOf(key);
             QString context = text.mid(index - 15);
             emit signal_show_result(filePath, line, context);
-            found = true;
+            found = 1;
             break;
         }
     }
@@ -334,42 +360,48 @@ bool SearchThread::searchString(const QString &filePath, const QString &key)
 
 void SearchThread::run()
 {
+    int found, Matched, Failed;
     QString filePath;
 
     forever {
+        sem.acquire();
         mutex.lock();
-        if (fileQueue.isEmpty())
-            cond.wait(&mutex);
         filePath = fileQueue.dequeue();
         mutex.unlock();
 
-        if (filePath == EndSearchString)
+        if (filePath == StopSearchString)
             break;
 
-        fileScanned++;
-        if (searchString(filePath, key))
-                fileMatched++;
+        found = searchString(filePath, key);
+        if (found > 0) {
+            Matched = 1;
+            Failed = 0;
+        } else if (found == 0) {
+            Matched = 0;
+            Failed = 0;
+        } else {
+            Matched = 0;
+            Failed = 1;
+        }
 
-        emit signal_update_label(fileScanned, fileMatched, fileFailed);
-        qDebug() << filePath;
+        emit signal_update_label(Matched, Failed);
     }
-
-    qDebug() << "END";
 }
 
 void SearchThread::stop()
 {
     QMutexLocker locker(&mutex);
+
+    /* stop thread as quick as possible, so pop up all of legal filePath */
     forever {
         if (fileQueue.isEmpty())
             break;
-        if (fileQueue.dequeue() == EndSearchString) {
-            fileQueue.enqueue(EndSearchString);
+        if (fileQueue.dequeue() == StopSearchString) {
+            fileQueue.enqueue(StopSearchString);
             break;
         }
+        sem.acquire();
     }
-    fileQueue.enqueue(EndSearchString);
     stopSearchStr = true;
-    cond.wakeOne();
 }
 

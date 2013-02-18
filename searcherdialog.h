@@ -30,7 +30,7 @@ private slots:
     void on_BTN_Stop_clicked();
 
     void slot_show_result(const QString filePath, const int line, const QString context);
-    void slot_update_label(const int fileScanned, const int fileMatched, const int fileFailed);
+    void slot_update_label(const int fileMatched, const int fileFailed);
     void slot_thread_stopped();
 
 private:
@@ -47,9 +47,12 @@ private:
     QTime ElapsedTime;
     QDir searchDir;
     QFutureWatcher<void> cntWatcher;
-    SearchThread *searchThread;
+    QList<SearchThread *> searchThreads;
     bool stopScanDir;
-    bool isThreadWorking;
+    int WorkingThreadNum;
+    int fileScanned;
+    int fileMatched;
+    int fileFailed;
 };
 
 class SearchThread : public QThread
@@ -62,18 +65,15 @@ public:
 
 signals:
     void signal_show_result(const QString filePath, const int line, const QString context);
-    void signal_update_label(const int fileScanned, const int fileMatched, const int fileFailed);
+    void signal_update_label(const int fileMatched, const int fileFailed);
 
 private:
     void run();
     void stop();
-    bool searchString(const QString &filePath, const QString &key);
+    int searchString(const QString &filePath, const QString &key);
 
     QString key;
     bool stopSearchStr;
-    int fileScanned;
-    int fileMatched;
-    int fileFailed;
 };
 
 #endif // SEARCHERDIALOG_H
