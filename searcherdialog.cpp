@@ -186,7 +186,7 @@ void SearcherDialog::on_BTN_Search_clicked()
     fileMatched = 0;
     fileFailed = 0;
 
-    /* clear working status */
+    /* make sure to clear working status */
     mutex.lock();
     sem.acquire(sem.available());
     fileQueue.clear();
@@ -202,6 +202,7 @@ void SearcherDialog::on_BTN_Search_clicked()
         connect(thread, SIGNAL(signal_update_label(int, int)),
                 this, SLOT(slot_update_label(int, int)));
         connect(thread, SIGNAL(finished()), this, SLOT(slot_thread_stopped()));
+        connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));
         thread->start();
     }
 
@@ -216,9 +217,14 @@ void SearcherDialog::on_BTN_Stop_clicked()
     stopScanDir = true;
     cntWatcher.waitForFinished();
 
-    for (int i = 0; i < WorkingThreadNum; i++) {
+    for (int i = 0; i < searchThreads.size(); i++) {
         SearchThread *thread = searchThreads[i];
-        delete thread;
+        thread->stop();
+        if (!thread->wait(1000)) {
+            qWarning() << i << ": Dead Search Thread, force to stop it!";
+            thread->terminate();
+            thread->wait();
+        }
     }
     searchThreads.clear();
 }
@@ -264,7 +270,7 @@ void SearcherDialog::collectFiles(QDir &dir, QStringList &filterInList,
     scanDirectory(dir, filterInList, filterOutList, key);
 
     mutex.lock();
-    for (int i = 0; i < WorkingThreadNum; i++) {
+    for (int i = 0; i < searchThreads.size(); i++) {
         fileQueue.enqueue(StopSearchString);
         sem.release();
     }
@@ -322,12 +328,6 @@ SearchThread::SearchThread(QString k)
 
 SearchThread::~SearchThread()
 {
-    stop();
-    if (!wait(1000)) {
-        qWarning() << "Dead loop Search Thread, force to stop it!";
-        terminate();
-        wait();
-    }
 }
 
 int SearchThread::searchString(const QString &filePath, const QString &key)

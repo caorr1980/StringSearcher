@@ -63,13 +63,14 @@ public:
     explicit SearchThread(QString k);
     ~SearchThread();
 
+    void stop();
+
 signals:
     void signal_show_result(const QString filePath, const int line, const QString context);
     void signal_update_label(const int fileMatched, const int fileFailed);
 
 private:
     void run();
-    void stop();
     int searchString(const QString &filePath, const QString &key);
 
     QString key;
