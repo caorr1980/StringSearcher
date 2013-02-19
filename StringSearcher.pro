@@ -13,8 +13,11 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        searcherdialog.cpp
+        searcherdialog.cpp \
+    optionsdlg.cpp
 
-HEADERS  += searcherdialog.h
+HEADERS  += searcherdialog.h \
+    optionsdlg.h
 
-FORMS    += searcherdialog.ui
+FORMS    += searcherdialog.ui \
+    optionsdlg.ui

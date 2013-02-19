@@ -16,11 +16,6 @@ class SearcherDialog : public QDialog
 public:
     explicit SearcherDialog(QWidget *parent = 0);
     ~SearcherDialog();
-
-    enum SearchMode {
-        QTMode       = 0x0001,
-        BMMode       = 0x0002,
-    };
     
 private slots:
     void on_BTN_Browse_clicked();
@@ -32,6 +27,8 @@ private slots:
     void slot_show_result(const QString filePath, const int line, const QString context);
     void slot_update_label(const int fileMatched, const int fileFailed);
     void slot_thread_stopped();
+
+    void on_BTN_Option_clicked();
 
 private:
     Ui::SearcherDialog *ui;

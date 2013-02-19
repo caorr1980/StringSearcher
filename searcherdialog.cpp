@@ -1,4 +1,5 @@
 #include <QDebug>
+#include "optionsdlg.h"
 #include "searcherdialog.h"
 #include "ui_searcherdialog.h"
 
@@ -21,9 +22,10 @@ SearcherDialog::SearcherDialog(QWidget *parent) :
     ui->TBW_Result->setHorizontalHeaderLabels(headers);
     ui->TBW_Result->setColumnWidth(0, 300);
     ui->TBW_Result->setColumnWidth(1, 60);
-    ui->TBW_Result->setTextElideMode(Qt::ElideLeft);
 
     readSettings();
+
+    WorkingThreadNum = 0;
 }
 
 SearcherDialog::~SearcherDialog()
@@ -414,3 +416,13 @@ void SearchThread::stop()
     stopSearchStr = true;
 }
 
+
+void SearcherDialog::on_BTN_Option_clicked()
+{
+    optionsDlg oDlg;
+
+    if (oDlg.exec() == QDialog::Accepted)
+        qDebug() << "Accepted";
+    else
+        qDebug() << "Rejected";
+}
