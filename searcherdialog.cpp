@@ -21,6 +21,7 @@ SearcherDialog::SearcherDialog(QWidget *parent) :
     ui->TBW_Result->setHorizontalHeaderLabels(headers);
     ui->TBW_Result->setColumnWidth(0, 300);
     ui->TBW_Result->setColumnWidth(1, 60);
+    ui->TBW_Result->setTextElideMode(Qt::ElideLeft);
 
     readSettings();
 }
@@ -138,6 +139,9 @@ void SearcherDialog::on_BTN_Browse_clicked()
                                 ui->CMB_DirPath->currentText(),
                                 options);
     if (!dirPath.isEmpty()) {
+        QString oldDirPath = ui->CMB_DirPath->currentText();
+        if (oldDirPath.endsWith(";"))
+            dirPath.prepend(oldDirPath);
         ui->CMB_DirPath->setEditText(dirPath);
     }
 }
@@ -170,6 +174,9 @@ void SearcherDialog::on_BTN_Search_clicked()
         else
             filterInList.append(filterList[i]);
     }
+
+    QStringList filePathList = path.split(";", QString::SkipEmptyParts);
+    filePathList.removeDuplicates();
 
     /* truncate previous results, and init result label */
     ui->TBW_Result->clearContents();
@@ -206,9 +213,8 @@ void SearcherDialog::on_BTN_Search_clicked()
         thread->start();
     }
 
-    searchDir = QDir(path);
     QFuture<void> cntFuture = QtConcurrent::run(this, &SearcherDialog::collectFiles,
-                                 searchDir, filterInList, filterOutList, key);
+                                 filePathList, filterInList, filterOutList, key);
     cntWatcher.setFuture(cntFuture);
 }
 
@@ -217,7 +223,7 @@ void SearcherDialog::on_BTN_Stop_clicked()
     stopScanDir = true;
     cntWatcher.waitForFinished();
 
-    for (int i = 0; i < searchThreads.size(); i++) {
+    for (int i = 0; i < WorkingThreadNum; i++) {
         SearchThread *thread = searchThreads[i];
         thread->stop();
         if (!thread->wait(1000)) {
@@ -263,11 +269,14 @@ void SearcherDialog::scanDirectory(QDir &dir, QStringList &filterInList,
     }
 }
 
-void SearcherDialog::collectFiles(QDir &dir, QStringList &filterInList,
+void SearcherDialog::collectFiles(QStringList filePathList, QStringList &filterInList,
                                      QStringList &filterOutList, QString &key)
 {
     stopScanDir = false;
-    scanDirectory(dir, filterInList, filterOutList, key);
+    for(int i = 0; i < filePathList.size(); i++) {
+        QDir dir(filePathList[i]);
+        scanDirectory(dir, filterInList, filterOutList, key);
+    }
 
     mutex.lock();
     for (int i = 0; i < searchThreads.size(); i++) {
@@ -284,7 +293,7 @@ void SearcherDialog::slot_show_result(const QString filePath,
     int row = ui->TBW_Result->rowCount();
     ui->TBW_Result->insertRow(row);
 
-    QTableWidgetItem *item0 = new QTableWidgetItem(searchDir.relativeFilePath(filePath));
+    QTableWidgetItem *item0 = new QTableWidgetItem(filePath);
     item0->setFlags(item0->flags() ^ Qt::ItemIsEditable);
     ui->TBW_Result->setItem(row, 0, item0);
 

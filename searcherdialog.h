@@ -41,11 +41,10 @@ private:
     void updateComboBox(QComboBox *comboBox, QString &text);
     void scanDirectory(QDir &dir, QStringList &filterInList,
                          QStringList &filterOutList, QString &key);
-    void collectFiles(QDir &dir, QStringList &filterInList,
+    void collectFiles(QStringList filePathList, QStringList &filterInList,
                          QStringList &filterOutList, QString &key);
 
     QTime ElapsedTime;
-    QDir searchDir;
     QFutureWatcher<void> cntWatcher;
     QList<SearchThread *> searchThreads;
     bool stopScanDir;
