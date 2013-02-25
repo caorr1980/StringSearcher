@@ -37,7 +37,6 @@ SearcherDialog::~SearcherDialog()
 
 void SearcherDialog::readSettings()
 {
-
     QSettings settings("StringSearcher.ini", QSettings::IniFormat);
     QStringList textList;
     int i;

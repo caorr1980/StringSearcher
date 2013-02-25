@@ -14,7 +14,14 @@ class optionsDlg : public QDialog
 public:
     explicit optionsDlg(QWidget *parent = 0);
     ~optionsDlg();
+
+public slots:
+    void slot_save_options();
+    void slot_nolarger_changed(int state);
     
+private slots:
+    void on_BTN_TextProgram_clicked();
+
 private:
     Ui::optionsDlg *ui;
 };

@@ -6,45 +6,118 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>406</width>
-    <height>210</height>
+    <width>361</width>
+    <height>331</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>361</width>
+    <height>331</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
     <widget class="QGroupBox" name="groupBox_2">
      <property name="title">
-      <string>Search Options</string>
+      <string>Options</string>
      </property>
-     <layout class="QGridLayout" name="gridLayout_2">
-      <item row="0" column="0">
-       <widget class="QCheckBox" name="checkBox_6">
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="QCheckBox" name="CKB_Case">
         <property name="text">
          <string>Case Sensitive</string>
         </property>
        </widget>
       </item>
-      <item row="0" column="1">
-       <widget class="QCheckBox" name="checkBox_7">
+      <item>
+       <widget class="QCheckBox" name="CKB_WholeWords">
         <property name="text">
          <string>Whole Words Only</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
-       <widget class="QCheckBox" name="checkBox_8">
+      <item>
+       <widget class="QCheckBox" name="CKB_Subdir">
         <property name="text">
-         <string>English Text Only</string>
+         <string>Include Subdirectories</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
-       <widget class="QCheckBox" name="checkBox_9">
+      <item>
+       <widget class="QCheckBox" name="CKB_TextOnly">
         <property name="text">
-         <string>Include Subdirectories</string>
+         <string>Only Search Text Files</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="CKB_OnlyFirst">
+        <property name="text">
+         <string>Only Search First Result for Each File</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+         <widget class="QCheckBox" name="CKB_NoLarger">
+          <property name="text">
+           <string>Don't Search Files Larger than</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="LNE_LargerSize">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>50</width>
+            <height>16777215</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label">
+          <property name="text">
+           <string>MB</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="CKB_ReplaceMode">
+        <property name="text">
+         <string>Enable Replace Mode</string>
         </property>
        </widget>
       </item>
@@ -70,15 +143,130 @@
    <item>
     <widget class="QGroupBox" name="groupBox">
      <property name="title">
-      <string>Global Options</string>
+      <string>Settings</string>
      </property>
-     <layout class="QGridLayout" name="gridLayout">
-      <item row="0" column="0">
-       <widget class="QCheckBox" name="checkBox">
-        <property name="text">
-         <string>Replace Mode</string>
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QLabel" name="label_3">
+          <property name="text">
+           <string>Launch </string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="CMB_ThreadNum">
+          <property name="maximumSize">
+           <size>
+            <width>30</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="currentIndex">
+           <number>1</number>
+          </property>
+          <item>
+           <property name="text">
+            <string>1</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>2</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>3</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>4</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>5</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>6</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>7</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>8</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>threads to Search String</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="Line" name="line">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
         </property>
        </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>Text Program:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <item>
+         <widget class="QToolButton" name="BTN_TextProgram">
+          <property name="maximumSize">
+           <size>
+            <width>30</width>
+            <height>18</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>...</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="LNE_TextProgram">
+          <property name="text">
+           <string>C:\Windows\system32\notepad.exe</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </widget>
@@ -95,6 +283,20 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>CKB_Case</tabstop>
+  <tabstop>CKB_WholeWords</tabstop>
+  <tabstop>CKB_Subdir</tabstop>
+  <tabstop>CKB_TextOnly</tabstop>
+  <tabstop>CKB_OnlyFirst</tabstop>
+  <tabstop>CKB_NoLarger</tabstop>
+  <tabstop>LNE_LargerSize</tabstop>
+  <tabstop>CKB_ReplaceMode</tabstop>
+  <tabstop>CMB_ThreadNum</tabstop>
+  <tabstop>BTN_TextProgram</tabstop>
+  <tabstop>LNE_TextProgram</tabstop>
+  <tabstop>buttonBox</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>
